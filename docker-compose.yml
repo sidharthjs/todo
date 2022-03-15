@@ -1,0 +1,33 @@
+version: "2"
+services:
+  database:
+    image: postgres:13.4-buster
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: user_1
+      POSTGRES_PASSWORD: password_1
+      POSTGRES_DB: todo
+    networks:
+      - default
+
+  todoapp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - database
+    ports:
+      - "4000:4000"
+    environment:
+      # Github
+      GITHUB_CLIENT_ID: 
+      GITHUB_CLIENT_SECRET: 
+      LOGIN_URI: https://github.com/login/oauth/authorize
+      ACCESS_TOKEN_URI: https://github.com/login/oauth/access_token
+      REDIRECT_URI: http://localhost:4000/github/callback
+      PROFILE_URI: https://api.github.com
+
+      # Postgres
+      DB_URL: postgres://user_1:password_1@database:5432/todo?sslmode=disable

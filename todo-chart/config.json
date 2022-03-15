@@ -1,0 +1,9 @@
+{
+    "GITHUB_CLIENT_ID": "",
+    "GITHUB_CLIENT_SECRET": "",
+    "LOGIN_URI": "https://github.com/login/oauth/authorize",
+    "ACCESS_TOKEN_URI": "https://github.com/login/oauth/access_token",
+    "REDIRECT_URI": "http://localhost:4000/github/callback",
+    "PROFILE_URI": "https://api.github.com",
+    "DB_URL": "postgres://user_1:password_1@database:5432/todo?sslmode=disable"
+}
