@@ -71,6 +71,10 @@ func main() {
 		})
 	})
 
+	app.Get("/users", func(c *fiber.Ctx) error {
+		return c.Redirect(readEnv("USERS_SVC_ENDPOINT") + "/users")
+	})
+
 	middleware.SetupAuthentication(app)
 
 	app.Get("/notes/:note_id", notesHandler.ReadNote)
