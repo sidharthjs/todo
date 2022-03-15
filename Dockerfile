@@ -10,5 +10,6 @@ FROM alpine:3.14.2 AS final
 WORKDIR /app
 COPY --from=builder /go/src/github.com/sidharthjs/todo/todo /app
 COPY --from=builder /go/src/github.com/sidharthjs/todo/db /app/db
+COPY --from=builder /go/src/github.com/sidharthjs/todo/public /app/public
 
 CMD ["./todo"]
