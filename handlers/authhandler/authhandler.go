@@ -1,6 +1,7 @@
 package authhandler
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -25,10 +26,11 @@ type AuthHandler struct {
 	AccessTokenURI string
 	RedirectURI    string
 	ProfileURI     string
+	UsersService   string
 }
 
 // New returns AuthHandler
-func New(clientID, clientSecret, loginURI, accessTokenURI, redirectURI, profileURI string) *AuthHandler {
+func New(clientID, clientSecret, loginURI, accessTokenURI, redirectURI, profileURI, usersService string) *AuthHandler {
 	return &AuthHandler{
 		ClientID:       clientID,
 		ClientSecret:   clientSecret,
@@ -36,6 +38,7 @@ func New(clientID, clientSecret, loginURI, accessTokenURI, redirectURI, profileU
 		AccessTokenURI: accessTokenURI,
 		RedirectURI:    redirectURI,
 		ProfileURI:     profileURI,
+		UsersService:   usersService,
 	}
 }
 
@@ -147,6 +150,33 @@ func (ah *AuthHandler) ProcessCallback(c *fiber.Ctx) error {
 		})
 	}
 	log.Debugf("JWT token: %s", token)
+
+	// Create User
+	postBody, _ := json.Marshal(map[string]string{
+		"username": user.Username,
+	})
+	responseBody := bytes.NewBuffer(postBody)
+
+	resp, err = http.Post(ah.UsersService+"/users/"+strconv.FormatInt(user.ID, 10), "application/json", responseBody)
+	if err != nil {
+		log.Errorf("error while creating user: %s", err)
+
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "error while creating user",
+		})
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Errorf("error while reading create user response: %s", err)
+
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "error while reading create user response",
+		})
+	}
+	log.Printf(string(body))
+	log.Debugf("User %s successfully created", user.Username)
 
 	return c.Status(fiber.StatusOK).SendString(fmt.Sprintf("Welcome %s!\nYour JWT token: %s\n\nPlease refer to README.md for curl commands to test the app.", user.Username, token))
 }

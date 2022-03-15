@@ -19,13 +19,19 @@ func main() {
 	log.SetLevel(log.DebugLevel)
 
 	// Perform DB Migration
-	err := migrate.Migrate(readEnv("DB_URL"), "file://db/migrations")
+	postgresUser := readEnv("POSTGRES_USER")
+	postgresPassword := readEnv("POSTGRES_PASSWORD")
+	postgresDB := readEnv("POSTGRES_DB")
+	postgresHost := readEnv("POSTGRES_HOST")
+	postgresPort := readEnv("POSTGRES_PORT")
+	dbURL := "postgres://" + postgresUser + ":" + postgresPassword + "@" + postgresHost + ":" + postgresPort + "/" + postgresDB + "?sslmode=disable"
+	err := migrate.Migrate(dbURL, "file://db/migrations")
 	if err != nil {
 		log.Fatalf("error performing db migration: %s", err)
 	}
 
 	// Init DB
-	db, err := postgres.NewClient(readEnv("DB_URL"))
+	db, err := postgres.NewClient(dbURL)
 	if err != nil {
 		log.Fatalf("error creating db client: %s", err)
 	}
@@ -39,7 +45,7 @@ func main() {
 	// Init handlers
 	authHandler := authhandler.New(readEnv("GITHUB_CLIENT_ID"), readEnv("GITHUB_CLIENT_SECRET"),
 		readEnv("LOGIN_URI"), readEnv("ACCESS_TOKEN_URI"),
-		readEnv("REDIRECT_URI"), readEnv("PROFILE_URI"))
+		readEnv("REDIRECT_URI"), readEnv("PROFILE_URI"), readEnv("USERS_SVC_ENDPOINT"))
 	notesHandler := noteshandler.New(db)
 
 	// Define routes
@@ -47,6 +53,23 @@ func main() {
 	app.Static("/", "./public/login.html")
 	app.Get("/login/github", authHandler.InitiateOAuth)
 	app.Get("/github/callback", authHandler.ProcessCallback)
+
+	app.Get("/env", func(c *fiber.Ctx) error {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"POSTGRES_USER":        readEnv("POSTGRES_USER"),
+			"POSTGRES_PASSWORD":    readEnv("POSTGRES_PASSWORD"),
+			"POSTGRES_DB":          readEnv("POSTGRES_DB"),
+			"POSTGRES_HOST":        readEnv("POSTGRES_HOST"),
+			"POSTGRES_PORT":        readEnv("POSTGRES_PORT"),
+			"GITHUB_CLIENT_ID":     readEnv("GITHUB_CLIENT_ID"),
+			"GITHUB_CLIENT_SECRET": readEnv("GITHUB_CLIENT_SECRET"),
+			"LOGIN_URI":            readEnv("LOGIN_URI"),
+			"ACCESS_TOKEN_URI":     readEnv("ACCESS_TOKEN_URI"),
+			"REDIRECT_URI":         readEnv("REDIRECT_URI"),
+			"PROFILE_URI":          readEnv("PROFILE_URI"),
+			"USERS_SVC_ENDPOINT":   readEnv("USERS_SVC_ENDPOINT"),
+		})
+	})
 
 	middleware.SetupAuthentication(app)
 
@@ -57,7 +80,7 @@ func main() {
 	app.Delete("/notes/:note_id", notesHandler.DeleteNote)
 
 	log.Info("app running...")
-	log.Fatal(app.Listen(":4000"))
+	log.Fatal(app.Listen(":4010"))
 }
 
 func readEnv(key string) string {
