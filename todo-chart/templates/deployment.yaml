@@ -42,24 +42,26 @@ spec:
             value: http://localhost:4000/github/callback
           - name: PROFILE_URI
             value: https://api.github.com
-          - name: DB_URL
-            value: postgres://user_1:password_1@todo-postgresql:5432/todo?sslmode=disable
+          - name: POSTGRES_DB
+            value: todo
+          - name: POSTGRES_HOST
+            value: {{ .Release.Name }}-postgresql
+          - name: POSTGRES_PORT
+            value: "5432"
+          - name: POSTGRES_USER
+            value: user_1
+          - name: POSTGRES_PASSWORD
+            value: password_1
+          - name: USERS_SVC_ENDPOINT
+            value: http://users-users-chart
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
-              containerPort: 80
+              containerPort: 4010
               protocol: TCP
-          livenessProbe:
-            httpGet:
-              path: /
-              port: http
-          readinessProbe:
-            httpGet:
-              path: /
-              port: http
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}
