@@ -4,12 +4,15 @@ metadata:
   name: {{ include "todo-chart.fullname" . }}
   labels:
     {{- include "todo-chart.labels" . | nindent 4 }}
+    app: {{ .Values.service.metadata.label.app }}
+    service: {{ .Values.service.metadata.label.service }}
 spec:
   type: {{ .Values.service.type }}
   ports:
     - port: {{ .Values.service.port }}
-      targetPort: http
+      targetPort: {{ .Values.service.targetPort }}
       protocol: TCP
       name: http
   selector:
     {{- include "todo-chart.selectorLabels" . | nindent 4 }}
+    app: {{ .Values.service.spec.selector.app }}

@@ -8,7 +8,9 @@ image:
   repository: djsidhu15/todo
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "2.0"
+  tag:
+    v1: "2.1"
+    v2: "3.1"
 
 imagePullSecrets: []
 nameOverride: ""
@@ -37,8 +39,16 @@ securityContext: {}
   # runAsUser: 1000
 
 service:
-  type: NodePort
+  type: ClusterIP
   port: 4010
+  targetPort: 4010
+  metadata:
+    label:
+      app: todo
+      service: todo
+  spec:
+    selector:
+      app: todo
 
 ingress:
   enabled: false
@@ -89,3 +99,25 @@ postgresql:
       postgresqlPassword: "password_1"
       postgresqlUsername: "user_1"
       servicePort: "5432"
+
+deployment:
+  metadata:
+    name:
+      v1: todo-v1
+      v2: todo-v2
+    label:
+      app: todo
+      v1: v1
+      v2: v2
+  spec:
+    selector:
+      matchLabels:
+        app: todo
+        v1: v1
+        v2: v2
+    template:
+      metadata:
+        labels:
+          app: todo
+          v1: v1
+          v2: v2

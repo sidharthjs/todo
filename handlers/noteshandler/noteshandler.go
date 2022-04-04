@@ -1,7 +1,10 @@
 package noteshandler
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 
 	jwtutil "local/sidharthjs/todo/jwt"
 	"local/sidharthjs/todo/notestore"
@@ -14,13 +17,15 @@ import (
 
 //NotesHandler struct defintion
 type NotesHandler struct {
-	Store notestore.NoteStore
+	Store        notestore.NoteStore
+	UsersService string
 }
 
 //New returns NotesHandler
-func New(notestore notestore.NoteStore) *NotesHandler {
+func New(notestore notestore.NoteStore, usersService string) *NotesHandler {
 	return &NotesHandler{
-		Store: notestore,
+		Store:        notestore,
+		UsersService: usersService,
 	}
 }
 
@@ -95,7 +100,62 @@ func (nh *NotesHandler) ReadNote(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.Status(fiber.StatusOK).JSON(note)
+	resp, err := http.Get(nh.UsersService + "/users/" + userID)
+	if err != nil {
+		log.Errorf("error while reading user: %s", err)
+
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "error while reading user",
+		})
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Errorf("error while reading user: %s", err)
+
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "error while reading user",
+		})
+	}
+
+	type userResponse struct {
+		ID        string
+		Username  string
+		CreatedAt string
+	}
+
+	var user userResponse
+	err = json.Unmarshal(body, &user)
+	if err != nil {
+		log.Errorf("error while unmarshalling user: %s", err)
+
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "error while unmarshalling user",
+		})
+	}
+	log.Info(user)
+
+	type readNoteResponse struct {
+		NoteID    string
+		NoteTitle string
+		NoteBody  string
+		CreatedAt string
+		UserID    string
+		Username  string
+	}
+
+	res := readNoteResponse{
+		NoteID:    note.ID,
+		NoteTitle: note.Title,
+		NoteBody:  note.Body,
+		CreatedAt: note.CreatedAt,
+		UserID:    user.ID,
+		Username:  user.Username,
+	}
+	log.Info(res)
+
+	return c.Status(fiber.StatusOK).JSON(res)
 }
 
 //ReadNotes is the handler method for reading multiple notes

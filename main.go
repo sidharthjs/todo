@@ -46,7 +46,7 @@ func main() {
 	authHandler := authhandler.New(readEnv("GITHUB_CLIENT_ID"), readEnv("GITHUB_CLIENT_SECRET"),
 		readEnv("LOGIN_URI"), readEnv("ACCESS_TOKEN_URI"),
 		readEnv("REDIRECT_URI"), readEnv("PROFILE_URI"), readEnv("USERS_SVC_ENDPOINT"))
-	notesHandler := noteshandler.New(db)
+	notesHandler := noteshandler.New(db, readEnv("USERS_SVC_ENDPOINT"))
 
 	// Define routes
 	app := fiber.New()
@@ -72,7 +72,32 @@ func main() {
 	})
 
 	app.Get("/users", func(c *fiber.Ctx) error {
-		return c.Redirect(readEnv("USERS_SVC_ENDPOINT") + "/users")
+		// return c.Redirect(readEnv("USERS_SVC_ENDPOINT") + "/users")
+		a := fiber.AcquireAgent()
+		req := a.Request()
+		req.Header.SetMethod(fiber.MethodGet)
+		req.SetRequestURI(readEnv("USERS_SVC_ENDPOINT") + "/users")
+
+		if err := a.Parse(); err != nil {
+			log.Errorf("error during client setup: %s", err)
+
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "error during execution",
+			})
+		}
+
+		code, body, errs := a.Bytes()
+		if len(errs) != 0 {
+			for _, err := range errs {
+				log.Errorf("error during client setup: %s", err)
+			}
+
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "error during execution",
+			})
+		}
+
+		return c.Status(code).Send(body)
 	})
 
 	middleware.SetupAuthentication(app)

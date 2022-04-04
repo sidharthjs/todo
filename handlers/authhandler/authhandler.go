@@ -45,7 +45,33 @@ func New(clientID, clientSecret, loginURI, accessTokenURI, redirectURI, profileU
 //InitiateOAuth redirects to the github login page
 func (ah *AuthHandler) InitiateOAuth(c *fiber.Ctx) error {
 	redirectURL := fmt.Sprintf("%s?client_id=%s&redirect_uri=%s&state=state", ah.LoginURI, ah.ClientID, ah.RedirectURI)
-	return c.Redirect(redirectURL)
+	// return c.Redirect(redirectURL)
+
+	a := fiber.AcquireAgent()
+	req := a.Request()
+	req.Header.SetMethod(fiber.MethodGet)
+	req.SetRequestURI(redirectURL)
+
+	if err := a.Parse(); err != nil {
+		log.Errorf("error during client setup: %s", err)
+
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "error during execution",
+		})
+	}
+
+	code, body, errs := a.Bytes()
+	if len(errs) != 0 {
+		for _, err := range errs {
+			log.Errorf("error during client setup: %s", err)
+		}
+
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "error during execution",
+		})
+	}
+
+	return c.Status(code).Send(body)
 }
 
 // ProcessCallback executes the logic of callback page after OAuth initialization
